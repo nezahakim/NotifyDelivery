@@ -5,7 +5,7 @@ type ScrollContextType = {
     setScrollY?: (y: number) => void;
   };
   
-  export const ScrollContext = createContext<ScrollContextType>({
+export const ScrollContext = createContext<ScrollContextType>({
     setScrollDirection: () => {},
     setScrollY: () => {},
   });
