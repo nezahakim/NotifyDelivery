@@ -129,7 +129,6 @@ export default function TabLayout() {
             right: 0,
             zIndex: 100,
             paddingTop: STATUS_BAR_HEIGHT,
-            paddingBottom: 5,
             // transform: [{ translateY: Animated.multiply(translateY, -1) }],
             backgroundColor: headerBgOpacity.interpolate({
               inputRange: [0, 0.95],

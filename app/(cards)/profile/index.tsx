@@ -29,6 +29,9 @@ import {
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 
+import { useAuth } from '@/src/contexts/AuthContext';
+import { withRequireAuth } from '@/src/hoc/withAuth';
+
 const mockUser = {
   name: 'Alexander Morgan',
   email: 'alex.morgan@email.com',
@@ -44,6 +47,8 @@ const mockUser = {
 const ProfileScreen = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
+
+  const { user, logout, isLoggingOut } = useAuth();
 
   const menuSections = [
     {
@@ -82,8 +87,7 @@ const ProfileScreen = () => {
   ];
 
   const handleLogout = () => {
-    // Implement logout logic
-    console.log('Logout');
+   logout();
   };
 
   return (
@@ -233,6 +237,7 @@ const ProfileScreen = () => {
                           router.push(item.route as any);
                         }
                       }}
+                      disabled={isLoggingOut}
                       className="flex-row items-center justify-between p-4"
                     >
                       <View className="flex-row items-center flex-1">
@@ -280,4 +285,4 @@ const ProfileScreen = () => {
   );
 };
 
-export default ProfileScreen;
+export default withRequireAuth(ProfileScreen);

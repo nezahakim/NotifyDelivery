@@ -8,9 +8,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 import { ExternalLink } from '@/src/components/external-link';
 import { AUTH_LOGIN_URL } from '@/src/constants/utils';
+import { withRequireGuest } from '@/src/hoc/withAuth';
 
 
 const AuthWelcomeScreen = () => {
@@ -98,7 +98,7 @@ const AuthWelcomeScreen = () => {
           </View>
 
         {/* Main Content */}
-        <View className="flex-1 justify-center px-6">
+        <View className="flex-1 justify-center items-center px-6">
           <Animated.View
             style={{
               opacity: fadeAnim,
@@ -140,12 +140,13 @@ const AuthWelcomeScreen = () => {
             >
               <TouchableOpacity
                 activeOpacity={0.85}
+                className='rounded-full'
               >
                 <LinearGradient
                   colors={['#dc2626', '#b91c1c', '#7f1d1d']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  className="rounded-full py-5 flex-row items-center justify-center shadow-2xl"
+                  className="rounded-full p-5 flex-row items-center justify-center shadow-2xl"
                   style={{
                     shadowColor: '#ef4444',
                     shadowOffset: { width: 0, height: 10 },
@@ -167,7 +168,7 @@ const AuthWelcomeScreen = () => {
           </Animated.View>
 
           {/* Terms */}
-          <Text className="text-gray-500 text-xs text-center mt-8 leading-5 w-full">
+          <Text className="text-gray-500 text-xs text-center mt-10 leading-5 w-full">
               By continuing, you agree to our{'\n'}
               <Text className="text-red-500 font-semibold"> Terms of Service </Text>
               and
@@ -190,4 +191,4 @@ const AuthWelcomeScreen = () => {
   );
 };
 
-export default AuthWelcomeScreen;
+export default withRequireGuest(AuthWelcomeScreen);

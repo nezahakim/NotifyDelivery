@@ -1,15 +1,14 @@
-import SecureStorage from 'expo-secure-store'
+import * as SecureStore from 'expo-secure-store'
 import { AUTH_URL } from "../constants/utils";
-
-
 
 const refresh_token = 'refresh_token'
 const acess_token = 'access_token'
 const user_info = 'user'
 
-export const auth_login = ({ url }: any) =>{
+export const auth_login = async ({ url }: any) =>{
+
   const token = new URL(url).searchParams.get('token') as string;
-  SecureStorage.setItemAsync(refresh_token, token);
+  await SecureStore.setItemAsync(refresh_token, token);
 
   if(!token){
     return { 
@@ -43,7 +42,7 @@ export const get_access_token = async ({ token }: any) =>{
   }
 
   const data = await result.json();
-  SecureStorage.setItemAsync(acess_token, data.accessToken);
+  await SecureStore.setItemAsync(acess_token, data.accessToken);
 
   return {
     status:true,
@@ -69,7 +68,7 @@ export const verify_access_token = async ({ access_token }: any) =>{
   }
 
 const data = await result.json();
-SecureStorage.setItemAsync(user_info, data.user);
+await SecureStore.setItemAsync(user_info, data.user);
 
 return {
   status: true,
@@ -80,8 +79,15 @@ return {
 }
 
 export const is_user_authenticated = async ():Promise<boolean>  =>{
-  const user = await SecureStorage.getItemAsync(user_info)
-  const refresh = await SecureStorage.getItemAsync(refresh_token)
+
+  const is_secure_storage_set = (await SecureStore.isAvailableAsync?.()) ?? false;
+
+  if (!is_secure_storage_set){
+    return false;
+  }
+
+  const user = await SecureStore.getItemAsync(user_info)
+  const refresh = await SecureStore.getItemAsync(refresh_token)
 
   if(!user && !refresh){
     return false;

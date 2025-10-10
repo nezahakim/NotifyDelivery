@@ -1,0 +1,102 @@
+// ========================================
+// USAGE EXAMPLES
+// ========================================
+
+// ============================================
+// 1. Using the useAuth hook in any component
+// ============================================
+import { useAuth } from '@/src/contexts/AuthContext';
+
+function ProfileScreen() {
+  const { user, logout, isLoggingOut } = useAuth();
+
+  return (
+    <View>
+      <Text>Welcome, {user?.name}</Text>
+      <Button 
+        title="Logout" 
+        onPress={logout} 
+        disabled={isLoggingOut}
+      />
+    </View>
+  );
+}
+
+// ============================================
+// 2. Using HOC to protect a screen
+// ============================================
+import { withRequireAuth } from '@/src/hoc/withAuth';
+
+function DashboardScreen() {
+  return (
+    <View>
+      <Text>Protected Dashboard</Text>
+    </View>
+  );
+}
+
+export default withRequireAuth(DashboardScreen);
+
+// ============================================
+// 3. Auth-only screen (login/register)
+// ============================================
+import { withRequireGuest } from '@/src/hoc/withAuth';
+
+function LoginScreen() {
+  return (
+    <View>
+      <Text>Login Page</Text>
+    </View>
+  );
+}
+
+export default withRequireGuest(LoginScreen);
+
+// ============================================
+// 4. Using auth queries directly
+// ============================================
+import { useIsAuthenticated, useLogout } from '@/src/hooks/queries/auth.queries';
+
+function SettingsScreen() {
+  const { data: isAuth } = useIsAuthenticated();
+  const { mutate: logout } = useLogout();
+
+  return (
+    <View>
+      <Text>Auth Status: {isAuth ? 'Logged In' : 'Guest'}</Text>
+      <Button title="Logout" onPress={() => logout()} />
+    </View>
+  );
+}
+
+// ============================================
+// 5. Token refresh example
+// ============================================
+import { useRefreshToken } from '@/src/hooks/queries/auth.queries';
+
+function TokenManager() {
+  const { mutate: refresh, isPending } = useRefreshToken();
+
+  return (
+    <Button 
+      title="Refresh Token" 
+      onPress={() => refresh()}
+      disabled={isPending}
+    />
+  );
+}
+
+// ============================================
+// 6. Custom authentication check
+// ============================================
+import { useAuthUser } from '@/src/contexts/AuthContext';
+
+function CustomComponent() {
+  const user = useAuthUser();
+
+  if (!user) {
+    return <Text>Please log in</Text>;
+  }
+
+  return <Text>Hello {user.name} </Text> 
+}
