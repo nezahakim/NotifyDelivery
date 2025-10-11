@@ -1,33 +1,31 @@
-// src/services/auth.service.ts
-
 import * as SecureStore from 'expo-secure-store';
-import { AUTH_URL } from '../constants/utils';
-import type { 
-  LoginResponse, 
-  AccessTokenResponse, 
-  VerifyResponse, 
-  User 
-} from '../types/auth.types';
+import { AUTH_URL } from '@/src/constants/utils';
+import type {
+  LoginResponse,
+  AccessTokenResponse,
+  VerifyTokenResponse,
+  User,
+  AuthTokens,
+} from '@/src/types/auth.types';
 
-// Secure Store Keys
+// Storage keys
 const STORAGE_KEYS = {
   REFRESH_TOKEN: 'refresh_token',
   ACCESS_TOKEN: 'access_token',
-  USER: 'user',
+  USER_INFO: 'user_info',
 } as const;
 
-class AuthService {
+// Auth API Service
+export class AuthService {
   /**
-   * Extracts token from callback URL and stores refresh token
+   * Store refresh token and initiate authentication flow
    */
-  async loginWithCallback(url: string): Promise<LoginResponse> {
+  static async login(token: string): Promise<LoginResponse> {
     try {
-      const token = new URL(url).searchParams.get('token');
-      
       if (!token) {
         return {
           status: false,
-          message: 'No token found in callback URL',
+          message: 'No token provided',
         };
       }
 
@@ -47,14 +45,14 @@ class AuthService {
   }
 
   /**
-   * Exchanges refresh token for access token
+   * Get access token using refresh token
    */
-  async getAccessToken(refreshToken: string): Promise<AccessTokenResponse> {
+  static async getAccessToken(refreshToken: string): Promise<AccessTokenResponse> {
     try {
       const response = await fetch(`${AUTH_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${refreshToken}`,
+          Authorization: `Bearer ${refreshToken}`,
           'Content-Type': 'application/json',
         },
       });
@@ -64,7 +62,7 @@ class AuthService {
       }
 
       const data = await response.json();
-
+      
       if (!data.accessToken) {
         throw new Error('No access token in response');
       }
@@ -85,14 +83,14 @@ class AuthService {
   }
 
   /**
-   * Verifies access token and retrieves user data
+   * Verify access token and get user data
    */
-  async verifyAccessToken(accessToken: string): Promise<VerifyResponse> {
+  static async verifyAccessToken(accessToken: string): Promise<VerifyTokenResponse> {
     try {
       const response = await fetch(`${AUTH_URL}/api/auth/verify`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       });
@@ -102,12 +100,12 @@ class AuthService {
       }
 
       const data = await response.json();
-
+      
       if (!data.user) {
         throw new Error('No user data in response');
       }
 
-      await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(data.user));
+      await SecureStore.setItemAsync(STORAGE_KEYS.USER_INFO, JSON.stringify(data.user));
 
       return {
         status: true,
@@ -123,92 +121,85 @@ class AuthService {
   }
 
   /**
-   * Complete authentication flow: login -> get access token -> verify
+   * Get stored tokens
    */
-  async authenticateWithCallback(url: string): Promise<VerifyResponse> {
-    const loginResult = await this.loginWithCallback(url);
-    if (!loginResult.status || !loginResult.refresh_token) {
-      return { status: false, message: loginResult.message };
-    }
+  static async getStoredTokens(): Promise<Partial<AuthTokens>> {
+    const [refreshToken, accessToken] = await Promise.all([
+      SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
+      SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
+    ]);
 
-    const tokenResult = await this.getAccessToken(loginResult.refresh_token);
-    if (!tokenResult.status || !tokenResult.access_token) {
-      return { status: false, message: tokenResult.message };
-    }
-
-    return await this.verifyAccessToken(tokenResult.access_token);
+    return {
+      refreshToken: refreshToken || undefined,
+      accessToken: accessToken || undefined,
+    };
   }
 
   /**
-   * Check if user is authenticated by verifying stored tokens
+   * Get stored user
    */
-  async isAuthenticated(): Promise<boolean> {
+  static async getStoredUser(): Promise<User | null> {
     try {
-      const isAvailable = (await SecureStore.isAvailableAsync?.()) ?? false;
-      if (!isAvailable) return false;
+      const userJson = await SecureStore.getItemAsync(STORAGE_KEYS.USER_INFO);
+      return userJson ? JSON.parse(userJson) : null;
+    } catch {
+      return null;
+    }
+  }
 
-      const user = await SecureStore.getItemAsync(STORAGE_KEYS.USER);
-      const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-
-      return !!(user && refreshToken);
-    } catch (error) {
-      console.error('Error checking authentication:', error);
+  /**
+   * Check if user is authenticated
+   */
+  static async isAuthenticated(): Promise<boolean> {
+    const isSecureStoreAvailable = (await SecureStore.isAvailableAsync?.()) ?? false;
+    
+    if (!isSecureStoreAvailable) {
       return false;
     }
+
+    const [user, refreshToken] = await Promise.all([
+      SecureStore.getItemAsync(STORAGE_KEYS.USER_INFO),
+      SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
+    ]);
+
+    return !!(user && refreshToken);
   }
 
   /**
-   * Get stored user data
+   * Clear all stored auth data
    */
-  async getStoredUser(): Promise<User | null> {
-    try {
-      const userStr = await SecureStore.getItemAsync(STORAGE_KEYS.USER);
-      return userStr ? JSON.parse(userStr) : null;
-    } catch (error) {
-      console.error('Error getting stored user:', error);
-      return null;
-    }
+  static async clearAuth(): Promise<void> {
+    await Promise.all([
+      SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
+      SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
+      SecureStore.deleteItemAsync(STORAGE_KEYS.USER_INFO),
+    ]);
   }
 
   /**
-   * Get stored refresh token
+   * Complete authentication flow
    */
-  async getStoredRefreshToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-    } catch (error) {
-      console.error('Error getting refresh token:', error);
-      return null;
+  static async authenticateUser(token: string): Promise<VerifyTokenResponse> {
+    // Step 1: Login and store refresh token
+    const loginResult = await this.login(token);
+    if (!loginResult.status || !loginResult.refresh_token) {
+      return {
+        status: false,
+        message: loginResult.message || 'Login failed',
+      };
     }
-  }
 
-  /**
-   * Get stored access token
-   */
-  async getStoredAccessToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-    } catch (error) {
-      console.error('Error getting access token:', error);
-      return null;
+    // Step 2: Get access token
+    const accessTokenResult = await this.getAccessToken(loginResult.refresh_token);
+    if (!accessTokenResult.status || !accessTokenResult.access_token) {
+      return {
+        status: false,
+        message: accessTokenResult.message || 'Failed to get access token',
+      };
     }
-  }
 
-  /**
-   * Logout - clear all stored auth data
-   */
-  async logout(): Promise<void> {
-    try {
-      await Promise.all([
-        SecureStore.deleteItemAsync(STORAGE_KEYS.USER),
-        SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
-        SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
-      ]);
-    } catch (error) {
-      console.error('Error during logout:', error);
-      throw error;
-    }
+    // Step 3: Verify token and get user
+    const verifyResult = await this.verifyAccessToken(accessTokenResult.access_token);
+    return verifyResult;
   }
 }
-
-export const authService = new AuthService();

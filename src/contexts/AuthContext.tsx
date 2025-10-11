@@ -1,75 +1,55 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { useIsAuthenticated, useStoredUser, useLogout, useRefreshToken } from '../hooks/queries/auth.queries';
-import type { User } from '../types/auth.types';
+import { useLogin, useLogout, useRefreshAuth, useUser } from '@/src/hooks/queries/auth.queries';
+import type { AuthContextType } from '@/src/types/auth.types';
 
-interface AuthContextValue {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  isError: boolean;
-  logout: () => void;
-  refreshToken: () => void;
-  isLoggingOut: boolean;
-  isRefreshing: boolean;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  // Queries
-  const { 
-    data: isAuthenticated = false, 
-    isLoading: isCheckingAuth,
-    isError: authCheckError 
-  } = useIsAuthenticated();
+  const { data: user, isLoading: isUserLoading, error } = useUser();
+  const loginMutation = useLogin();
+  const logoutMutation = useLogout();
+  const refreshMutation = useRefreshAuth();
 
-  const { 
-    data: user = null, 
-    isLoading: isLoadingUser 
-  } = useStoredUser();
+  const isLoading = isUserLoading || loginMutation.isPending || logoutMutation.isPending;
+  const isAuthenticated = !!user;
 
-  // Mutations
-  const { 
-    mutate: logout, 
-    isPending: isLoggingOut 
-  } = useLogout();
+  const login = async (token: string): Promise<void> => {
+    await loginMutation.mutateAsync(token);
+  };
 
-  const { 
-    mutate: refreshToken, 
-    isPending: isRefreshing 
-  } = useRefreshToken();
+  const logout = async (): Promise<void> => {
+    await logoutMutation.mutateAsync();
+  };
 
-  // Combine loading states
-  const isLoading = isCheckingAuth || isLoadingUser;
-  const isError = authCheckError;
+  const refreshAuth = async (): Promise<void> => {
+    await refreshMutation.mutateAsync();
+  };
 
-  // Memoize context value to prevent unnecessary re-renders
-  const value = useMemo<AuthContextValue>(
+  const contextValue = useMemo<AuthContextType>(
     () => ({
-      user,
+      user: user || null,
       isAuthenticated,
       isLoading,
-      isError,
-      logout: () => logout(),
-      refreshToken: () => refreshToken(),
-      isLoggingOut,
-      isRefreshing,
+      error: (error || loginMutation.error || logoutMutation.error || refreshMutation.error) as Error | null,
+      login,
+      logout,
+      refreshAuth,
     }),
-    [user, isAuthenticated, isLoading, isError, logout, refreshToken, isLoggingOut, isRefreshing]
+    [user, isAuthenticated, isLoading, error, loginMutation.error, logoutMutation.error, refreshMutation.error]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };
 
 /**
- * Custom hook to access auth context
- * Throws error if used outside AuthProvider
+ * Hook to access auth context
+ * @throws Error if used outside AuthProvider
  */
-export const useAuth = (): AuthContextValue => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
 
   if (!context) {
@@ -77,20 +57,4 @@ export const useAuth = (): AuthContextValue => {
   }
 
   return context;
-};
-
-/**
- * Hook to get authenticated user or null
- */
-export const useAuthUser = (): User | null => {
-  const { user } = useAuth();
-  return user;
-};
-
-/**
- * Hook to check if user is authenticated
- */
-export const useIsUserAuthenticated = (): boolean => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated;
 };

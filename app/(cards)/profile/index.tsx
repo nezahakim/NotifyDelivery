@@ -25,12 +25,11 @@ import {
   Star,
   Award,
   Gift,
-  Settings,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 import { useAuth } from '@/src/contexts/AuthContext';
-import { withRequireAuth } from '@/src/hoc/withAuth';
+import { withProtectedRoute } from '@/src/hoc/withAuth';
 
 const mockUser = {
   name: 'Alexander Morgan',
@@ -48,7 +47,9 @@ const ProfileScreen = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
 
-  const { user, logout, isLoggingOut } = useAuth();
+  const { user, logout } = useAuth();
+
+  mockUser.name = user?.name || user?.email || mockUser.name;
 
   const menuSections = [
     {
@@ -86,8 +87,12 @@ const ProfileScreen = () => {
     },
   ];
 
-  const handleLogout = () => {
-   logout();
+  const handleLogout = async () => {
+    try{
+        await logout();
+    } catch (error) {
+        console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -237,7 +242,6 @@ const ProfileScreen = () => {
                           router.push(item.route as any);
                         }
                       }}
-                      disabled={isLoggingOut}
                       className="flex-row items-center justify-between p-4"
                     >
                       <View className="flex-row items-center flex-1">
@@ -285,4 +289,4 @@ const ProfileScreen = () => {
   );
 };
 
-export default withRequireAuth(ProfileScreen);
+export default withProtectedRoute(ProfileScreen);

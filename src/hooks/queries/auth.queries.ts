@@ -1,131 +1,122 @@
-// src/hooks/queries/auth.queries.ts
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { authService } from '../../services/auth.service';
-import type { User } from '../../types/auth.types';
+import { AuthService } from '@/src/services/auth.service';
+import type { User } from '@/src/types/auth.types';
 
-// Query Keys
+// Query keys
 export const authKeys = {
   all: ['auth'] as const,
   user: () => [...authKeys.all, 'user'] as const,
-  isAuthenticated: () => [...authKeys.all, 'is-authenticated'] as const,
-  tokens: () => [...authKeys.all, 'tokens'] as const,
+  status: () => [...authKeys.all, 'status'] as const,
 };
 
 /**
- * Query to check authentication status
+ * Hook to get current user
  */
-export const useIsAuthenticated = () => {
-  return useQuery({
-    queryKey: authKeys.isAuthenticated(),
-    queryFn: () => authService.isAuthenticated(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
-  });
-};
-
-/**
- * Query to get stored user data
- */
-export const useStoredUser = () => {
+export const useUser = () => {
   return useQuery({
     queryKey: authKeys.user(),
-    queryFn: () => authService.getStoredUser(),
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
+    queryFn: () => AuthService.getStoredUser(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (previously cacheTime)
   });
 };
 
 /**
- * Mutation for callback authentication flow
+ * Hook to check authentication status
  */
-export const useAuthCallback = () => {
+export const useAuthStatus = () => {
+  return useQuery({
+    queryKey: authKeys.status(),
+    queryFn: () => AuthService.isAuthenticated(),
+    staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+/**
+ * Hook to handle login mutation
+ */
+export const useLogin = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (url: string) => authService.authenticateWithCallback(url),
-    onSuccess: (data: { status: any; user?: any; }) => {
-      if (data.status && data.user) {
-        // Update user cache
-        queryClient.setQueryData(authKeys.user(), data.user);
-        // Update auth status
-        queryClient.setQueryData(authKeys.isAuthenticated(), true);
-        // Invalidate to refetch fresh data
-        queryClient.invalidateQueries({ queryKey: authKeys.all });
+    mutationFn: async (token: string) => {
+      const result = await AuthService.authenticateUser(token);
+      
+      if (!result.status || !result.user) {
+        throw new Error(result.message || 'Authentication failed');
       }
+      
+      return result.user;
     },
-    onError: (error: any) => {
-      console.error('Authentication error:', error);
-      queryClient.setQueryData(authKeys.isAuthenticated(), false);
+    onSuccess: (user: User) => {
+      // Update user cache
+      queryClient.setQueryData(authKeys.user(), user);
+      // Update auth status
+      queryClient.setQueryData(authKeys.status(), true);
+    },
+    onError: () => {
+      // Clear cache on error
+      queryClient.setQueryData(authKeys.user(), null);
+      queryClient.setQueryData(authKeys.status(), false);
     },
   });
 };
 
 /**
- * Mutation for token refresh
- */
-export const useRefreshToken = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      const refreshToken = await authService.getStoredRefreshToken();
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-      return authService.getAccessToken(refreshToken);
-    },
-    onSuccess: (data: { status: any; }) => {
-      if (data.status) {
-        queryClient.invalidateQueries({ queryKey: authKeys.tokens() });
-      }
-    },
-  });
-};
-
-/**
- * Mutation for logout
+ * Hook to handle logout mutation
  */
 export const useLogout = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => authService.logout(),
+    mutationFn: async () => {
+      await AuthService.clearAuth();
+    },
     onSuccess: () => {
       // Clear all auth-related cache
       queryClient.setQueryData(authKeys.user(), null);
-      queryClient.setQueryData(authKeys.isAuthenticated(), false);
+      queryClient.setQueryData(authKeys.status(), false);
       queryClient.removeQueries({ queryKey: authKeys.all });
-    },
-    onError: (error: any) => {
-      console.error('Logout error:', error);
     },
   });
 };
 
 /**
- * Query to verify current access token
+ * Hook to refresh authentication
  */
-export const useVerifyToken = (enabled: boolean = false) => {
+export const useRefreshAuth = () => {
   const queryClient = useQueryClient();
 
-  return useQuery<{ status: any; user?: any }>({
-    queryKey: [...authKeys.tokens(), 'verify'],
-    queryFn: async () => {
-      const accessToken = await authService.getStoredAccessToken();
-      if (!accessToken) {
-        throw new Error('No access token available');
+  return useMutation({
+    mutationFn: async () => {
+      const tokens = await AuthService.getStoredTokens();
+      
+      if (!tokens.refreshToken) {
+        throw new Error('No refresh token available');
       }
-      return authService.verifyAccessToken(accessToken);
+
+      const accessTokenResult = await AuthService.getAccessToken(tokens.refreshToken);
+      
+      if (!accessTokenResult.status || !accessTokenResult.access_token) {
+        throw new Error(accessTokenResult.message || 'Failed to refresh token');
+      }
+
+      const verifyResult = await AuthService.verifyAccessToken(accessTokenResult.access_token);
+      
+      if (!verifyResult.status || !verifyResult.user) {
+        throw new Error(verifyResult.message || 'Failed to verify token');
+      }
+
+      return verifyResult.user;
     },
-    enabled,
-    retry: 1,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    select: (data: { status: any; user?: any }) => {
-      if (data.status && data.user) {
-        queryClient.setQueryData(authKeys.user(), data.user);
-      }
-      return data;
+    onSuccess: (user: User) => {
+      queryClient.setQueryData(authKeys.user(), user);
+      queryClient.setQueryData(authKeys.status(), true);
+    },
+    onError: () => {
+      queryClient.setQueryData(authKeys.user(), null);
+      queryClient.setQueryData(authKeys.status(), false);
     },
   });
 };

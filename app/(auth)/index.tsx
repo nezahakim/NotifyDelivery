@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ExternalLink } from '@/src/components/external-link';
 import { AUTH_LOGIN_URL } from '@/src/constants/utils';
-import { withRequireGuest } from '@/src/hoc/withAuth';
+import { withPublicRoute } from '@/src/hoc/withAuth';
 
 
 const AuthWelcomeScreen = () => {
@@ -140,7 +140,6 @@ const AuthWelcomeScreen = () => {
             >
               <TouchableOpacity
                 activeOpacity={0.85}
-                className='rounded-full'
               >
                 <LinearGradient
                   colors={['#dc2626', '#b91c1c', '#7f1d1d']}
@@ -148,6 +147,7 @@ const AuthWelcomeScreen = () => {
                   end={{ x: 1, y: 1 }}
                   className="rounded-full p-5 flex-row items-center justify-center shadow-2xl"
                   style={{
+                    borderRadius: 9999,
                     shadowColor: '#ef4444',
                     shadowOffset: { width: 0, height: 10 },
                     shadowOpacity: 0.6,
@@ -191,4 +191,4 @@ const AuthWelcomeScreen = () => {
   );
 };
 
-export default withRequireGuest(AuthWelcomeScreen);
+export default withPublicRoute(AuthWelcomeScreen);

@@ -1,77 +1,66 @@
-// src/hoc/withAuth.tsx
-
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator, Text } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 interface WithAuthOptions {
   redirectTo?: string;
   requireAuth?: boolean;
-  showLoader?: boolean;
 }
 
 /**
- * Higher-Order Component for authentication protection
- * Redirects unauthenticated users and shows loading states
+ * HOC to protect routes that require authentication
  */
 export function withAuth<P extends object>(
   Component: React.ComponentType<P>,
   options: WithAuthOptions = {}
 ) {
-  const {
-    redirectTo = '/(auth)/index',
-    requireAuth = true,
-    showLoader = true,
-  } = options;
+  const { redirectTo = '/(auth)/index', requireAuth = true } = options;
 
-  const WithAuthComponent: React.FC<P> = (props) => {
-    const { isAuthenticated, isLoading, user } = useAuth();
+  return function AuthenticatedComponent(props: P) {
+    const { isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
+    const segments = useSegments();
 
-    // Show loading state
-    if (isLoading && showLoader) {
+    useEffect(() => {
+      if (isLoading) return;
+
+      const inAuthGroup = segments[0] === '(auth)';
+
+      if (requireAuth && !isAuthenticated && !inAuthGroup) {
+        // Redirect to auth if not authenticated and not already in auth
+        router.replace(redirectTo as any);
+      } else if (!requireAuth && isAuthenticated && inAuthGroup) {
+        // Redirect to main app if authenticated and in auth group
+        router.replace('/(tabs)' as any);
+      }
+    }, [isAuthenticated, isLoading, segments]);
+
+    if (isLoading) {
       return (
         <View className="flex-1 justify-center items-center bg-white dark:bg-gray-900">
-          <ActivityIndicator size="large" color="#3b82f6" />
-          <Text className="mt-4 text-gray-600 dark:text-gray-400">
-            Loading...
-          </Text>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text className="mt-4 text-gray-600 dark:text-gray-400">Loading...</Text>
         </View>
       );
     }
 
-    // Redirect if authentication required but user not authenticated
     if (requireAuth && !isAuthenticated) {
-      router.replace(redirectTo as any);
       return null;
     }
 
-    // Redirect authenticated users away from auth pages
-    if (!requireAuth && isAuthenticated) {
-      router.replace('/(tabs)' as any);
-      return null;
-    }
-
-    // Render the wrapped component
-    return <Component {...props} user={user} />;
+    return <Component {...props} />;
   };
-
-  WithAuthComponent.displayName = `withAuth(${Component.displayName || Component.name || 'Component'})`;
-
-  return WithAuthComponent;
 }
 
 /**
- * HOC variant that requires authentication
+ * HOC for protected routes (requires authentication)
  */
-export function withRequireAuth<P extends object>(Component: React.ComponentType<P>) {
-  return withAuth(Component, { requireAuth: true });
-}
+export const withProtectedRoute = <P extends object>(Component: React.ComponentType<P>) =>
+  withAuth(Component, { requireAuth: true });
 
 /**
- * HOC variant that requires guest (not authenticated)
+ * HOC for public routes (redirects if authenticated)
  */
-export function withRequireGuest<P extends object>(Component: React.ComponentType<P>) {
-  return withAuth(Component, { requireAuth: false });
-}
+export const withPublicRoute = <P extends object>(Component: React.ComponentType<P>) =>
+  withAuth(Component, { requireAuth: false });

@@ -1,46 +1,53 @@
-// ========================================
-// USAGE EXAMPLES
-// ========================================
-
 // ============================================
-// 1. Using the useAuth hook in any component
+// USAGE EXAMPLES
+// ============================================
+
+// 1. Using the auth context in any component
 // ============================================
 import { useAuth } from '@/src/contexts/AuthContext';
 
 function ProfileScreen() {
-  const { user, logout, isLoggingOut } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // User will be automatically redirected by AuthGuard
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return <Text>Please log in</Text>;
+  }
 
   return (
     <View>
-      <Text>Welcome, {user?.name}</Text>
-      <Button 
-        title="Logout" 
-        onPress={logout} 
-        disabled={isLoggingOut}
-      />
+      <Text>Welcome, {user?.name}!</Text>
+      <Text>Email: {user?.email}</Text>
+      <Button title="Logout" onPress={handleLogout} />
     </View>
   );
 }
 
+// 2. Using HOC to protect a route
 // ============================================
-// 2. Using HOC to protect a screen
-// ============================================
-import { withRequireAuth } from '@/src/hoc/withAuth';
+import { withProtectedRoute } from '@/src/hoc/withAuth';
 
 function DashboardScreen() {
   return (
     <View>
-      <Text>Protected Dashboard</Text>
+      <Text>This is a protected dashboard</Text>
     </View>
   );
 }
 
-export default withRequireAuth(DashboardScreen);
+export default withProtectedRoute(DashboardScreen);
 
+// 3. Using HOC for public routes (auth screens)
 // ============================================
-// 3. Auth-only screen (login/register)
-// ============================================
-import { withRequireGuest } from '@/src/hoc/withAuth';
+import { withPublicRoute } from '@/src/hoc/withAuth';
 
 function LoginScreen() {
   return (
@@ -50,53 +57,114 @@ function LoginScreen() {
   );
 }
 
-export default withRequireGuest(LoginScreen);
+export default withPublicRoute(LoginScreen);
 
+// 4. Manual token refresh
 // ============================================
-// 4. Using auth queries directly
-// ============================================
-import { useIsAuthenticated, useLogout } from '@/src/hooks/queries/auth.queries';
+import { useAuth } from '@/src/contexts/AuthContext';
 
-function SettingsScreen() {
-  const { data: isAuth } = useIsAuthenticated();
-  const { mutate: logout } = useLogout();
+function SomeComponent() {
+  const { refreshAuth, login } = useAuth();
+
+  const handleRefresh = async () => {
+    try {
+      await refreshAuth();
+      console.log('Token refreshed successfully');
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    }
+  };
+
+  const handleManualLogin = async (token: string) => {
+    try {
+      await login(token);
+      console.log('Login successful');
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
 
   return (
     <View>
-      <Text>Auth Status: {isAuth ? 'Logged In' : 'Guest'}</Text>
-      <Button title="Logout" onPress={() => logout()} />
+      <Button title="Refresh Token" onPress={handleRefresh} />
     </View>
   );
 }
 
+// 5. Using with AuthGuard in root layout (RECOMMENDED)
 // ============================================
-// 5. Token refresh example
-// ============================================
-import { useRefreshToken } from '@/src/hooks/queries/auth.queries';
+// app/_layout.tsx
+import { AuthGuard } from '@/src/components/AuthGuard';
 
-function TokenManager() {
-  const { mutate: refresh, isPending } = useRefreshToken();
-
+export default function RootLayout() {
   return (
-    <Button 
-      title="Refresh Token" 
-      onPress={() => refresh()}
-      disabled={isPending}
-    />
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AuthProvider>
+          <AuthGuard>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)/index" />
+              <Stack.Screen name="(auth)/callback" />
+            </Stack>
+          </AuthGuard>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 
+// 6. Checking loading states
 // ============================================
-// 6. Custom authentication check
-// ============================================
-import { useAuthUser } from '@/src/contexts/AuthContext';
+function MyComponent() {
+  const { isLoading, user, error } = useAuth();
 
-function CustomComponent() {
-  const user = useAuthUser();
-
-  if (!user) {
-    return <Text>Please log in</Text>;
+  if (isLoading) {
+    return <ActivityIndicator />;
   }
 
-  return <Text>Hello {user.name} </Text> 
+  if (error) {
+    return <Text>Error: {error.message}</Text>;
+  }
+
+  return <Text>Hello {user?.name}</Text>;
+}
+
+// 7. Using TanStack Query hooks directly (advanced)
+// ============================================
+import { useUser, useLogout } from '@/src/hooks/queries/auth.queries';
+
+function AdvancedComponent() {
+  const { data: user, isLoading, error, refetch } = useUser();
+  const logoutMutation = useLogout();
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
+
+  return (
+    <View>
+      {isLoading && <ActivityIndicator />}
+      {error && <Text>Error loading user</Text>}
+      {user && <Text>Welcome {user.name}</Text>}
+      <Button title="Logout" onPress={handleLogout} />
+      <Button title="Refresh User" onPress={() => refetch()} />
+    </View>
+  );
+}
+
+// 8. Auth status check without context
+// ============================================
+import { useAuthStatus } from '@/src/hooks/queries/auth.queries';
+
+function StatusComponent() {
+  const { data: isAuthenticated, isLoading } = useAuthStatus();
+
+  if (isLoading) return <ActivityIndicator />;
+
+  return (
+    <Text>
+      Status: {isAuthenticated ? 'Authenticated' : 'Not Authenticated'}
+    </Text>
+  );
 }
