@@ -43,8 +43,6 @@ export const HeaderComponent = () => {
             </View>
           </TouchableOpacity>
         </View>
-
-      
     </View>
   );
 };

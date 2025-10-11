@@ -164,36 +164,3 @@ export const AddToCartModal: React.FC<AddToCartModalProps> = ({
     </Modal>
   );
 };
-
-// Usage Example:
-/*
-import { AddToCartModal } from '@/components/AddToCartModal';
-
-const YourScreen = () => {
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [cartItems, setCartItems] = useState({});
-
-  const handleAddToCart = (item, quantity) => {
-    setCartItems(prev => ({
-      ...prev,
-      [item.id]: (prev[item.id] || 0) + quantity
-    }));
-    setSelectedItem(null);
-  };
-
-  return (
-    <>
-      <TouchableOpacity onPress={() => setSelectedItem(someItem)}>
-        <Text>View Item</Text>
-      </TouchableOpacity>
-
-      <AddToCartModal
-        visible={selectedItem !== null}
-        item={selectedItem}
-        onClose={() => setSelectedItem(null)}
-        onAddToCart={handleAddToCart}
-      />
-    </>
-  );
-};
-*/
