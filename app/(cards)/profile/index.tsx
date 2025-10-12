@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -27,30 +27,31 @@ import {
   Gift,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
-
 import { useAuth } from '@/src/contexts/AuthContext';
 import { withProtectedRoute } from '@/src/hoc/withAuth';
+import { get_profile } from '@/src/services/profile.service';
+import { useQuery } from '@tanstack/react-query';
+import { Profile } from '@/src/types/profile.types';
 
-const mockUser = {
-  name: 'Alexander Morgan',
-  email: 'alex.morgan@email.com',
-  phone: '+1 (555) 123-4567',
-  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200',
-  memberSince: 'January 2024',
-  totalOrders: 47,
-  totalSpent: 1847.50,
-  loyaltyPoints: 2340,
-  tier: 'Gold Member',
-};
 
 const ProfileScreen = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   const { user, logout } = useAuth();
 
-  mockUser.name = user?.name || user?.email || mockUser.name;
+  const { data, status, error } = useQuery({
+    queryKey: ['profile'],
+    queryFn: get_profile,
+  });
 
+  useEffect(() => {
+    if (data?.profile) {
+      setProfile(data.profile);
+    }
+  }, [data]);
+  
   const menuSections = [
     {
       title: 'Account',
@@ -124,7 +125,7 @@ const ProfileScreen = () => {
               <View className="flex-row items-center mb-4">
                 <View className="relative">
                   <Image
-                    source={{ uri: mockUser.avatar }}
+                    source={{ uri: profile?.avatar_url }}
                     className="w-20 h-20 rounded-full border-4 border-white"
                   />
                   <View className="absolute -bottom-1 -right-1 w-7 h-7 bg-yellow-500 rounded-full items-center justify-center border-2 border-white">
@@ -133,12 +134,12 @@ const ProfileScreen = () => {
                 </View>
                 <View className="flex-1 ml-4">
                   <Text className="text-white text-2xl font-bold mb-1">
-                    {mockUser.name}
+                    {profile?.full_name}
                   </Text>
                   <View className="flex-row items-center bg-white/20 px-3 py-1 rounded-full self-start">
                     <Award size={14} color="white" />
                     <Text className="text-white text-xs font-bold ml-1">
-                      {mockUser.tier}
+                      {profile?.tier}
                     </Text>
                   </View>
                 </View>
@@ -147,21 +148,21 @@ const ProfileScreen = () => {
               <View className="flex-row items-center justify-between pt-4 border-t border-white/20">
                 <View className="items-center flex-1">
                   <Text className="text-white text-2xl font-bold">
-                    {mockUser.totalOrders}
+                    {profile?.total_orders}
                   </Text>
                   <Text className="text-white/70 text-xs mt-1">Orders</Text>
                 </View>
                 <View className="w-px h-10 bg-white/20" />
                 <View className="items-center flex-1">
                   <Text className="text-white text-2xl font-bold">
-                    ${mockUser.totalSpent.toFixed(0)}
+                    ${profile?.total_spent?.toFixed(0)}
                   </Text>
                   <Text className="text-white/70 text-xs mt-1">Spent</Text>
                 </View>
                 <View className="w-px h-10 bg-white/20" />
                 <View className="items-center flex-1">
                   <Text className="text-white text-2xl font-bold">
-                    {mockUser.loyaltyPoints}
+                    {profile?.loyalty_points}
                   </Text>
                   <Text className="text-white/70 text-xs mt-1">Points</Text>
                 </View>
@@ -277,7 +278,7 @@ const ProfileScreen = () => {
                 NotifyDelivery+ Premium
               </Text>
               <Text className="text-gray-600 text-xs">
-                Version 1.0.0 • Member since {mockUser.memberSince}
+                Version 1.0.0 • Member since {profile?.member_since}
               </Text>
             </View>
           </View>

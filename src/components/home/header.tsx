@@ -5,8 +5,25 @@ import {
   View
 } from 'react-native';
 import { router } from 'expo-router';
+import { get_address } from '@/src/services/profile.service';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { get_default_address } from '@/src/services/address.service';
 
 export const HeaderComponent = () => {
+  const [location, setLocation] = useState()
+
+  const { data, status, error } = useQuery({
+    queryKey: ['location'],
+    queryFn: get_address,
+  });
+
+  useEffect(() => {
+    if (data?.address) {
+      setLocation(data.address[0].address_line);
+    }
+  }, [data]);
+
   return (
     <View className="px-6 py-3 flex-row items-center justify-between">
 {/* Logo with location */}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { get_delivery_user } from '@/src/services/profile.service';
 
 const AuthCallbackScreen: React.FC = () => {
   const params = useLocalSearchParams<{ token?: string }>();
@@ -27,6 +28,12 @@ const AuthCallbackScreen: React.FC = () => {
       try {
 
         await login(token);
+        const { status, message } = await get_delivery_user();
+
+        if(!status){
+          setError(message ? message : 'Authentication failed');
+        }
+        
         router.replace('/(tabs)');
 
       } catch (err) {
