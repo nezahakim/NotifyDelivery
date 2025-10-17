@@ -1,7 +1,5 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { AuthProvider } from '@/src/contexts/AuthContext';
 import '@/src/global.css';
 
@@ -9,8 +7,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000, 
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
     },
@@ -25,11 +23,9 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AuthProvider>
           <Stack
             screenOptions={{
@@ -41,7 +37,6 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)/callback" options={{ headerShown: false }} />
           </Stack>
         </AuthProvider>
-      </ThemeProvider>
     </QueryClientProvider>
   );
 }

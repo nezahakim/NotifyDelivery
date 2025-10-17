@@ -8,7 +8,6 @@ import { router } from 'expo-router';
 import { get_address } from '@/src/services/profile.service';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { get_default_address } from '@/src/services/address.service';
 
 export const HeaderComponent = () => {
   const [location, setLocation] = useState()
@@ -17,6 +16,8 @@ export const HeaderComponent = () => {
     queryKey: ['location'],
     queryFn: get_address,
   });
+
+  console.log(error)
 
   useEffect(() => {
     if (data?.address) {
@@ -37,7 +38,7 @@ export const HeaderComponent = () => {
         {/* Location */}
         <View className="flex-row items-center -mt-2">
           <Ionicons name="location" size={14} color="#ef4444" />
-          <Text className="text-gray-400 text-sm ml-1">Downtown, NY</Text>
+          <Text className="text-gray-400 text-sm ml-1">{ location ? location : 'Set your location' }</Text>
           <Ionicons name="chevron-down" size={14} color="#9ca3af" />
         </View>
       </View>

@@ -18,7 +18,7 @@ import HeroSection from "@/src/components/home/hero";
 import { withScrollContext } from "@/src/components/with-scroll-context";
 import { Star } from "lucide-react-native";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 const HomeScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");

@@ -123,7 +123,7 @@ export const get_address = async () => {
         return {
             status: true,
             message: "success",
-            address: data
+            address: data.addresses
         }
 
     }catch(err: any){

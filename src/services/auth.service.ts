@@ -7,7 +7,6 @@ import type {
   User,
   AuthTokens,
 } from '@/src/types/auth.types';
-import { decodeHashedToken } from '@notifycode/hash-it'
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -34,19 +33,12 @@ export class AuthService {
         };
       }
 
-      const HASH_IT_KEY = await SecureStore.getItemAsync('HASH_IT_KEY') || '';
-
-      const decodedRefToken = decodeHashedToken({
-        token: token,
-        key: HASH_IT_KEY
-      })
-
-      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, decodedRefToken);
+      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, token);
 
       return {
         status: true,
         message: 'Login successful',
-        refresh_token: decodedRefToken,
+        refresh_token: token,
       };
     } catch (error) {
       return {
@@ -67,6 +59,7 @@ export class AuthService {
           Authorization: `Bearer ${refreshToken}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ mobile_request: true, key:'mobile_rqN1' })
       });
 
       if (!response.ok) {
@@ -79,19 +72,12 @@ export class AuthService {
         throw new Error('No access token in response');
       }
 
-      const HASH_IT_KEY = await SecureStore.getItemAsync('HASH_IT_KEY') || '';
-
-      const decodedAccToken = decodeHashedToken({
-        token: data.accessToken,
-        key: HASH_IT_KEY
-      })
-
-      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, decodedAccToken);
+      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
 
       return {
         status: true,
         message: 'Access token retrieved',
-        access_token: decodedAccToken,
+        access_token: data.accessToken,
       };
     } catch (error) {
       return {
@@ -112,6 +98,7 @@ export class AuthService {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ mobile_request: true, key:'mobile_rqN1' })
       });
 
       if (!response.ok) {
