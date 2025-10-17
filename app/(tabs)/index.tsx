@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import HeroSection from "@/src/components/home/hero";
 import { withScrollContext } from "@/src/components/with-scroll-context";
+import { Star } from "lucide-react-native";
 
 const { width, height } = Dimensions.get("window");
 
@@ -167,7 +168,7 @@ const HorizontalRestaurantRow = ({ restaurants }: any) => {
 
             {/* Rating Badge */}
             <View className="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded flex-row items-center">
-              <Ionicons name="star" size={12} color="#FFD700" />
+              <Star size={12} color='#FFD700' className="text-[#FFD700]" />
               <Text className="text-white text-xs font-bold ml-1">
                 {restaurant.rating || "4.8"}
               </Text>
@@ -196,60 +197,3 @@ const HorizontalRestaurantRow = ({ restaurants }: any) => {
 };
 
 export default withScrollContext(HomeScreen);
-
-// import { FlashList } from '@shopify/flash-list';
-// import { Ionicons } from '@expo/vector-icons'; // Assuming you are using Ionicons
-// import { View, Text, TouchableOpacity, Image } from 'react-native';
-
-// const RestaurantList = ({ restaurants, router, width }: { restaurants: any[], router: any, width: number }) => {
-//   return (
-//     <FlashList
-//       horizontal
-//       showsHorizontalScrollIndicator={false}
-//       contentContainerStyle={{ paddingHorizontal: 24 }}
-//       data={restaurants}
-//       keyExtractor={(item, index) => item.id || index.toString()}
-//       renderItem={({ item: restaurant }) => (
-//         <TouchableOpacity
-//           key={restaurant.id}
-//           onPress={() => router.push('/provider')}
-//           className="mr-4"
-//           style={{ width: width * 0.42 }}
-//           activeOpacity={0.9}
-//         >
-//           <View className="bg-zinc-900 rounded-lg overflow-hidden">
-//             <Image
-//               source={{ uri: restaurant.image }}
-//               style={{ width: '100%', height: 140 }}
-//               resizeMode="cover"
-//             />
-
-//             {/* Rating Badge */}
-//             <View className="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded flex-row items-center">
-//               <Ionicons name="star" size={12} color="#FFD700" />
-//               <Text className="text-white text-xs font-bold ml-1">
-//                 {restaurant.rating || '4.8'}
-//               </Text>
-//             </View>
-
-//             <View className="p-3">
-//               <Text
-//                 className="text-white font-bold text-sm mb-1"
-//                 numberOfLines={1}
-//               >
-//                 {restaurant.name}
-//               </Text>
-//               <Text className="text-gray-400 text-xs mb-2" numberOfLines={1}>
-//                 {restaurant.cuisine}
-//               </Text>
-//               <View className="flex-row items-center">
-//                 <Ionicons name="time-outline" size={12} color="#9ca3af" />
-//                 <Text className="text-gray-400 text-xs ml-1">25-35 min</Text>
-//               </View>
-//             </View>
-//           </View>
-//         </TouchableOpacity>
-//       )}
-//     />
-//   );
-// };

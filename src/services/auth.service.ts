@@ -7,6 +7,7 @@ import type {
   User,
   AuthTokens,
 } from '@/src/types/auth.types';
+import { decodeHashedToken } from '@notifycode/hash-it'
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -15,6 +16,7 @@ const STORAGE_KEYS = {
   USER_INFO: 'user_info',
 } as const;
 
+
 // Auth API Service
 export class AuthService {
   /**
@@ -22,6 +24,9 @@ export class AuthService {
    */
   static async login(token: string): Promise<LoginResponse> {
     try {
+
+      await SecureStore.setItemAsync('HASH_IT_KEY', 'my-top_sec-long-neza1r-key')
+
       if (!token) {
         return {
           status: false,
@@ -29,12 +34,19 @@ export class AuthService {
         };
       }
 
-      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, token);
+      const HASH_IT_KEY = await SecureStore.getItemAsync('HASH_IT_KEY') || '';
+
+      const decodedRefToken = decodeHashedToken({
+        token: token,
+        key: HASH_IT_KEY
+      })
+
+      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, decodedRefToken);
 
       return {
         status: true,
         message: 'Login successful',
-        refresh_token: token,
+        refresh_token: decodedRefToken,
       };
     } catch (error) {
       return {
@@ -67,12 +79,19 @@ export class AuthService {
         throw new Error('No access token in response');
       }
 
-      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
+      const HASH_IT_KEY = await SecureStore.getItemAsync('HASH_IT_KEY') || '';
+
+      const decodedAccToken = decodeHashedToken({
+        token: data.accessToken,
+        key: HASH_IT_KEY
+      })
+
+      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, decodedAccToken);
 
       return {
         status: true,
         message: 'Access token retrieved',
-        access_token: data.accessToken,
+        access_token: decodedAccToken,
       };
     } catch (error) {
       return {
@@ -173,6 +192,7 @@ export class AuthService {
       SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
       SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
       SecureStore.deleteItemAsync(STORAGE_KEYS.USER_INFO),
+      SecureStore.deleteItemAsync('HASH_IT_TOKEN'),
     ]);
   }
 
